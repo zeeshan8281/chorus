@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+.archive
+site
+test
+examples
+data
+*.log
+.env
+.env.*
+.DS_Store

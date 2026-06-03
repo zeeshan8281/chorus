@@ -1,7 +1,7 @@
 {
   "name": "chorus",
   "version": "0.1.0",
-  "description": "Shared memory for multi-agent systems: many agents read and write one memory, update shared facts by key, track contributors, and stay in sync via an activity feed.",
+  "description": "Verifiable, injection-resistant agent memory: every write is hashed, timestamped, and committed to a signed Merkle log; reads return inclusion proofs. Runs inside an Intel TDX TEE on EigenCompute so the operator cannot tamper.",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -44,8 +44,12 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
+  },
+  "optionalDependencies": {
+    "pg": "^8.13.1"
   }
 }

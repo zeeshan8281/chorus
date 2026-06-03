@@ -1,163 +1,144 @@
-import { randomId, generateApiKey } from "./util.js";
+import { sha256Hex, canonicalize, sign, randomId, generateApiKey } from "./crypto.js";
+import { leafHash, computeRoot, computeProof } from "./merkle.js";
+import { HeuristicInjectionGate, type InjectionGate } from "./inject.js";
+import { loadSigner, type Signer, type Attestation } from "./attest.js";
 import { InMemoryStore } from "./store/memory.js";
 import type { Store, RecallQuery } from "./store/types.js";
 import type {
-  Agent,
-  MemoryInput,
-  MemoryEntry,
-  RememberResult,
-  ActivityEvent,
+  Agent, MemoryInput, MemoryEntry, RootCommitment, WriteReceipt, BlockedWrite, VerifiableRead,
 } from "./types.js";
 
-export interface MemoryLayerOptions {
+/** Canonical core of an entry — the bytes the content hash commits to. */
+function entryCore(e: Pick<MemoryEntry, "id" | "namespace" | "content" | "key" | "source" | "authorAgentId" | "createdAt">) {
+  return canonicalize({
+    id: e.id, namespace: e.namespace, content: e.content,
+    key: e.key ?? null, source: e.source ?? null,
+    authorAgentId: e.authorAgentId, createdAt: e.createdAt,
+  });
+}
+
+/** The leaf payload bound into the Merkle log for an entry. */
+function leafPayload(e: MemoryEntry): string {
+  return sha256Hex(canonicalize({ index: e.index, contentHash: e.contentHash, authorAgentId: e.authorAgentId, createdAt: e.createdAt }));
+}
+export function computeLeaf(e: MemoryEntry): string {
+  return leafHash(leafPayload(e));
+}
+
+export interface VerifiableMemoryOptions {
   store?: Store;
-  /** Injectable clock for deterministic tests. Defaults to wall clock. */
+  gate?: InjectionGate;
+  signer?: Signer;
   now?: () => Date;
 }
 
 /**
- * Shared memory for a team of agents.
+ * Verifiable, injection-resistant agent memory.
  *
- * The job: many agents read and write one memory and stay in sync. Facts are
- * addressed by `key` within a `namespace`, so when a second agent learns
- * something newer it UPDATES the shared fact instead of piling on a duplicate —
- * and every contributor is tracked. An activity feed lets agents catch up on
- * what the others have learned since they last looked.
+ *  write → injection gate → hash + timestamp → append to Merkle log
+ *        → sign the new root with the TEE-bound key
+ *  read  → entry + Merkle inclusion proof + signed root
+ *
+ * Because the signing key only exists inside the attested enclave, a tampering
+ * operator cannot forge an entry or rewrite history without changing the image
+ * digest — which breaks attestation. Clients verify with `verifyRead`.
  */
-export class MemoryLayer {
+export class VerifiableMemory {
   readonly store: Store;
+  private readonly gate: InjectionGate;
+  private readonly signer: Signer;
   private readonly now: () => Date;
-  private seq = 0;
-  private seqReady: Promise<void>;
+  private chain: Promise<unknown> = Promise.resolve(); // serialize appends → consistent roots
 
-  constructor(opts: MemoryLayerOptions = {}) {
+  constructor(opts: VerifiableMemoryOptions = {}) {
     this.store = opts.store ?? new InMemoryStore();
+    this.gate = opts.gate ?? new HeuristicInjectionGate();
+    this.signer = opts.signer ?? loadSigner();
     this.now = opts.now ?? (() => new Date());
-    // Continue the activity sequence across restarts of a durable store.
-    this.seqReady = this.store.lastSeq().then((s) => {
-      this.seq = s;
-    });
   }
 
-  private iso(): string {
+  get attestation(): Attestation {
+    return this.signer.attestation;
+  }
+  private iso() {
     return this.now().toISOString();
   }
 
-  private async record(
-    type: ActivityEvent["type"],
-    entry: MemoryEntry,
-    agentId: string,
-  ): Promise<void> {
-    await this.seqReady;
-    const event: ActivityEvent = {
-      seq: ++this.seq,
-      type,
-      namespace: entry.namespace,
-      agentId,
-      entryId: entry.id,
-      key: entry.key,
-      at: this.iso(),
-    };
-    await this.store.appendActivity(event);
-  }
-
-  /** Register an agent. Returns its identity (including a one-time apiKey). */
   async registerAgent(name: string): Promise<Agent> {
-    const agent: Agent = {
-      id: randomId("agent"),
-      name,
-      apiKey: generateApiKey(),
-      createdAt: this.iso(),
-    };
+    const agent: Agent = { id: randomId("agent"), name, apiKey: generateApiKey(), createdAt: this.iso() };
     await this.store.putAgent(agent);
     return agent;
   }
 
-  /**
-   * Remember a fact. If `key` is given and already exists in the namespace,
-   * the shared entry is updated in place (revision bumped, contributor added);
-   * otherwise a new entry is created.
-   */
-  async remember(agentId: string, input: MemoryInput): Promise<RememberResult> {
-    const agent = await this.store.getAgent(agentId);
-    if (!agent) throw new Error(`unknown agent: ${agentId}`);
-    if (!input.namespace) throw new Error("namespace is required");
-    if (!input.content) throw new Error("content is required");
-
-    const at = this.iso();
-    const existing = input.key
-      ? await this.store.getByKey(input.namespace, input.key)
-      : undefined;
-
-    if (existing) {
-      const previousContent = existing.content;
-      const contributors = existing.contributors.includes(agentId)
-        ? existing.contributors
-        : [...existing.contributors, agentId];
-      const entry: MemoryEntry = {
-        ...existing,
-        content: input.content,
-        source: input.source ?? existing.source,
-        authorAgentId: agentId,
-        contributors,
-        revision: existing.revision + 1,
-        tags: input.tags ?? existing.tags,
-        metadata: input.metadata ?? existing.metadata,
-        updatedAt: at,
-      };
-      await this.store.putEntry(entry);
-      await this.record("update", entry, agentId);
-      return { entry, updated: true, previousContent };
-    }
-
-    const entry: MemoryEntry = {
-      id: randomId("mem"),
-      namespace: input.namespace,
-      content: input.content,
-      key: input.key,
-      source: input.source,
-      authorAgentId: agentId,
-      contributors: [agentId],
-      revision: 1,
-      tags: input.tags ?? [],
-      metadata: input.metadata ?? {},
-      createdAt: at,
-      updatedAt: at,
-    };
-    await this.store.putEntry(entry);
-    await this.record("remember", entry, agentId);
-    return { entry, updated: false };
+  /** Sign the current Merkle root over all committed leaves. */
+  private async commitRoot(): Promise<RootCommitment> {
+    const leaves = await this.store.leaves();
+    const root = computeRoot(leaves);
+    const size = leaves.length;
+    const signedAt = this.iso();
+    const rootSignature = sign(canonicalize({ root, size, signedAt }), this.signer.keys.privateKey);
+    const commitment: RootCommitment = { root, size, rootSignature, signerPublicKey: this.signer.keys.publicKey, signedAt };
+    await this.store.saveRoot(commitment);
+    return commitment;
   }
 
-  /** Read shared memory by key, text, or tag. */
+  /** Write a memory. Blocked writes are never committed to the log. */
+  async write(agentId: string, input: MemoryInput): Promise<WriteReceipt | BlockedWrite> {
+    const agent = await this.store.getAgent(agentId);
+    if (!agent) throw new Error(`unknown agent: ${agentId}`);
+    if (!input.namespace || !input.content) throw new Error("namespace and content are required");
+
+    const injection = await this.gate.inspect(input);
+    if (injection.blocked) return { blocked: true, injection };
+
+    // Serialize the read-modify-write of the log so concurrent writes get
+    // distinct indices and a consistent signed root.
+    const run = this.chain.then(async () => {
+      const createdAt = this.iso();
+      const id = randomId("mem");
+      const contentHash = sha256Hex(entryCore({
+        id, namespace: input.namespace, content: input.content,
+        key: input.key, source: input.source, authorAgentId: agentId, createdAt,
+      }));
+
+      if (input.key) {
+        const prior = await this.store.getByKey(input.namespace, input.key);
+        if (prior) await this.store.markSuperseded(prior.id);
+      }
+
+      const index = await this.store.leafCount();
+      const entry: MemoryEntry = {
+        id, namespace: input.namespace, content: input.content, key: input.key,
+        source: input.source, authorAgentId: agentId, index, createdAt, contentHash,
+        tags: input.tags ?? [], metadata: input.metadata ?? {}, superseded: false,
+      };
+      const lh = computeLeaf(entry);
+      await this.store.appendLeaf(lh);
+      await this.store.putEntry(entry);
+      const commitment = await this.commitRoot();
+      return { entry, leafHash: lh, commitment, injection } satisfies WriteReceipt;
+    });
+    this.chain = run.catch(() => {});
+    return run;
+  }
+
+  /** Read one entry with a Merkle inclusion proof against the latest signed root. */
+  async readWithProof(id: string): Promise<VerifiableRead | undefined> {
+    const entry = await this.store.getEntry(id);
+    if (!entry) return undefined;
+    const leaves = await this.store.leaves();
+    const proof = computeProof(leaves, entry.index);
+    const commitment = (await this.store.latestRoot()) ?? (await this.commitRoot());
+    return { entry, leafHash: computeLeaf(entry), proof, commitment };
+  }
+
   async recall(query: RecallQuery): Promise<MemoryEntry[]> {
     return this.store.recall(query);
   }
-
-  /** Get the single current entry for a key, if any. */
   async get(namespace: string, key: string): Promise<MemoryEntry | undefined> {
     return this.store.getByKey(namespace, key);
   }
-
-  /** Retract a fact from shared memory. */
-  async forget(agentId: string, namespace: string, ref: { key?: string; id?: string }): Promise<boolean> {
-    const entry = ref.id
-      ? await this.store.getEntry(ref.id)
-      : ref.key
-        ? await this.store.getByKey(namespace, ref.key)
-        : undefined;
-    if (!entry || entry.namespace !== namespace) return false;
-    await this.store.deleteEntry(entry.id);
-    await this.record("forget", entry, agentId);
-    return true;
-  }
-
-  /**
-   * What's happened in a namespace since `sinceSeq`. Agents poll this with the
-   * last seq they saw to catch up on what other agents have learned.
-   */
-  async activity(namespace: string, sinceSeq = 0, limit?: number): Promise<ActivityEvent[]> {
-    await this.seqReady;
-    return this.store.activity(namespace, sinceSeq, limit);
+  async latestRoot(): Promise<RootCommitment | undefined> {
+    return this.store.latestRoot();
   }
 }
