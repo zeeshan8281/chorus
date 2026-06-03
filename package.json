@@ -1,0 +1,51 @@
+{
+  "name": "chorus",
+  "version": "0.1.0",
+  "description": "Shared memory for multi-agent systems: many agents read and write one memory, update shared facts by key, track contributors, and stay in sync via an activity feed.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zeeshan8281/chorus.git"
+  },
+  "homepage": "https://github.com/zeeshan8281/chorus#readme",
+  "keywords": [
+    "ai-agents",
+    "multi-agent",
+    "agent-memory",
+    "shared-memory",
+    "coordination",
+    "llm",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "chorus": "./dist/server.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "example": "tsx examples/multi-agent.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
