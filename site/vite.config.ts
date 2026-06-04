@@ -1,8 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
-// base: "./" so the built site works when served from any path (GitHub Pages, etc.)
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   base: "./",
+  resolve: {
+    alias: { "@": new URL("./src", import.meta.url).pathname },
+  },
 });

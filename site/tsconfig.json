@@ -12,8 +12,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "useDefineForClassFields": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] }
   },
   "include": ["src"]
 }
