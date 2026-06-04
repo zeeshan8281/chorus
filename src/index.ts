@@ -1,19 +1,32 @@
-export { VerifiableMemory, computeLeaf } from "./memory.js";
-export type { VerifiableMemoryOptions } from "./memory.js";
-export { verifyRead } from "./verify.js";
-export type { VerifyResult } from "./verify.js";
+// Service + server
+export { createApp } from "./server.js";
+export { MemoryService, NotFoundError } from "./services/memory-service.js";
+export type { CreateInput, UpdateInput } from "./services/memory-service.js";
+export { startExpirationSweep } from "./services/expiration-service.js";
+
+// Stores
+export { MemStore } from "./db/mem-store.js";
+export { PgStore } from "./db/pg-store.js";
+export type { Store } from "./db/store.js";
+
+// Commitment + Merkle primitives
+export { canonicalize, contentHash } from "./commitment/canonicalize.js";
+export { sha256, toHex, fromHex } from "./commitment/hasher.js";
 export {
-  HeuristicInjectionGate, AllowAllGate,
-} from "./inject.js";
-export type { InjectionGate, InjectionVerdict, HeuristicGateOptions } from "./inject.js";
-export { loadSigner, trustAttestation } from "./attest.js";
-export type { Attestation, Signer } from "./attest.js";
-export { InMemoryStore } from "./store/memory.js";
-export { PostgresStore } from "./store/postgres.js";
-export type { Store, RecallQuery } from "./store/types.js";
+  signMemoryOperation, verifyMemorySignature, signBytes, verifyBytes,
+  publicKeyFromPrivate, ethAddress, newPrivateKey,
+} from "./commitment/signer.js";
 export {
-  computeRoot, computeProof, verifyProof, leafHash, EMPTY_ROOT,
-} from "./merkle.js";
-export type { ProofStep } from "./merkle.js";
-export { sha256Hex, canonicalize, generateKeyPair, sign, verify } from "./crypto.js";
+  EMPTY_HASH, computeLeafHash, computeRoot, computeProof, verifyProof,
+} from "./merkle/tree.js";
+
+// TEE
+export { initializeWallet } from "./tee/wallet.js";
+export type { TeeWallet } from "./tee/wallet.js";
+export { getAttestation } from "./tee/attestation.js";
+
+// Client-side verification
+export { verifyMemory } from "./client/verifier.js";
+export type { VerifyResult } from "./client/verifier.js";
+
 export * from "./types.js";

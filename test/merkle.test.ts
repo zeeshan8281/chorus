@@ -1,36 +1,41 @@
 import { describe, it, expect } from "vitest";
-import { computeRoot, computeProof, verifyProof, leafHash, EMPTY_ROOT } from "../src/merkle.js";
+import { computeRoot, computeProof, verifyProof, computeLeafHash, EMPTY_HASH } from "../src/merkle/tree.js";
+import { sha256 } from "../src/commitment/hasher.js";
 
-const leaves = (n: number) => Array.from({ length: n }, (_, i) => leafHash(Buffer.from(`leaf-${i}`).toString("hex")));
+const leaves = (n: number) => Array.from({ length: n }, (_, i) => sha256(`leaf-${i}`));
 
 describe("merkle tree", () => {
-  it("empty tree has the empty root", () => {
-    expect(computeRoot([])).toBe(EMPTY_ROOT);
+  it("empty tree → EMPTY_HASH", () => {
+    expect(computeRoot([]).equals(EMPTY_HASH)).toBe(true);
   });
 
-  it("produces a valid inclusion proof for every leaf (odd & even counts)", () => {
-    for (const n of [1, 2, 3, 4, 5, 8, 9, 17]) {
+  it("valid inclusion proof for every leaf across sizes", () => {
+    for (const n of [1, 2, 3, 5, 8, 9, 16, 17, 31]) {
       const ls = leaves(n);
-      const root = computeRoot(ls);
       for (let i = 0; i < n; i++) {
-        const proof = computeProof(ls, i);
-        expect(verifyProof(ls[i]!, proof, root)).toBe(true);
+        expect(verifyProof(computeProof(ls, i))).toBe(true);
       }
     }
   });
 
-  it("rejects a proof for the wrong leaf", () => {
+  it("proof for one leaf does not verify another", () => {
     const ls = leaves(6);
-    const root = computeRoot(ls);
-    const proof = computeProof(ls, 2);
-    expect(verifyProof(ls[3]!, proof, root)).toBe(false);
+    const p = computeProof(ls, 2);
+    p.leafHash = ls[3]!.toString("hex");
+    expect(verifyProof(p)).toBe(false);
   });
 
-  it("changing any leaf changes the root (tamper-evidence)", () => {
+  it("changing a leaf changes the root", () => {
     const ls = leaves(7);
-    const root = computeRoot(ls);
-    const tampered = ls.slice();
-    tampered[4] = leafHash(Buffer.from("evil").toString("hex"));
-    expect(computeRoot(tampered)).not.toBe(root);
+    const root = computeRoot(ls).toString("hex");
+    ls[3] = sha256("tampered");
+    expect(computeRoot(ls).toString("hex")).not.toBe(root);
+  });
+
+  it("leaf hash binds contentHash + id + timestamp", () => {
+    const ch = sha256("content");
+    const ts = new Date("2026-06-04T00:00:00Z");
+    expect(computeLeafHash(ch, "id-1", ts).equals(computeLeafHash(ch, "id-1", ts))).toBe(true);
+    expect(computeLeafHash(ch, "id-1", ts).equals(computeLeafHash(ch, "id-2", ts))).toBe(false);
   });
 });

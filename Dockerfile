@@ -1,22 +1,33 @@
-# Image deployed into the Intel TDX enclave by the EigenCompute `ecloud` CLI.
-# The CLI builds for linux/amd64 and records this image's digest in the
-# attestation — clients verify that digest on the Verifiability Dashboard.
+# Verifiable Agent Memory — single TEE container (Node + PostgreSQL 16),
+# deployed into an Intel TDX enclave by `ecloud compute app deploy`.
 
-FROM node:22-slim AS build
+# --- build stage ---
+FROM node:20-slim AS build
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json tsconfig*.json ./
 RUN npm ci
-COPY tsconfig*.json ./
 COPY src ./src
+COPY scripts ./scripts
 RUN npm run build
 
-FROM node:22-slim AS runtime
-ENV NODE_ENV=production
+# --- runtime: PostgreSQL 16 base + Node 20 ---
+FROM postgres:16-bookworm
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+  && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+  && apt-get install -y --no-install-recommends nodejs \
+  && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/dist ./dist
-# EigenCompute injects SIGNER_PRIVATE_KEY/SIGNER_PUBLIC_KEY (from KMS, bound to
-# this image digest), TDX_QUOTE, IMAGE_DIGEST, EIGEN_APP_ID, and DATABASE_URL.
+COPY scripts ./scripts
+
+ENV PGDATA=/data/pgdata \
+    DATA_DIR=/data \
+    PORT=3000 \
+    DATABASE_URL=postgresql://memory@127.0.0.1:5432/memory
 EXPOSE 3000
-CMD ["node", "dist/server.js"]
+VOLUME /data
+ENTRYPOINT ["bash", "scripts/entrypoint.sh"]

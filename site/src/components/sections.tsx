@@ -2,20 +2,17 @@ import { useEffect, useState } from "react";
 
 const GH = "https://github.com/zeeshan8281/chorus";
 
-function Seal({ size = 18 }: { size?: number }) {
+function Mark({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ffa12a" />
-          <stop offset="1" stopColor="#ff7a00" />
+        <linearGradient id="eig" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#a77dff" />
+          <stop offset="1" stopColor="#8ae06c" />
         </linearGradient>
       </defs>
-      <circle cx="16" cy="16" r="13" stroke="url(#g)" strokeWidth="2" />
-      <path
-        d="M16 7l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"
-        fill="url(#g)"
-      />
+      <rect x="3" y="3" width="26" height="26" rx="6" stroke="url(#eig)" strokeWidth="2" />
+      <path d="M11 16 L15 20 L21 12" stroke="url(#eig)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </svg>
   );
 }
@@ -24,14 +21,14 @@ export function Nav() {
   return (
     <nav className="nav">
       <div className="nav-inner">
-        <a className="brand glow" href="#top">
-          <Seal /> VERIFIABLE&nbsp;MEMORY
+        <a className="brand" href="#top">
+          <Mark /> Verifiable Memory <span className="tag">EIGENCOMPUTE</span>
         </a>
         <div className="nav-links">
-          <a href="#why">Why</a>
+          <a href="#why">Threats</a>
           <a href="#how">How it works</a>
           <a href="#demo">Live demo</a>
-          <a href="#code">Code</a>
+          <a href="#code">API</a>
           <a href="#faq">FAQ</a>
         </div>
         <a className="ghbtn" href={GH} target="_blank" rel="noreferrer">
@@ -43,19 +40,17 @@ export function Nav() {
 }
 
 const FEED = [
-  '<span class="d">»</span> agent <span class="c">assistant</span> → write user:42',
-  '<span class="d">  gate……</span> <span class="ok">risk 0.00 · clean</span>',
-  '<span class="d">  hash……</span> <span class="am">sha256 9f3c…a1</span>',
-  '<span class="d">  commit…</span> <span class="ok">leaf #4 → root signed</span>',
+  '<span class="d">$</span> agent <span class="c">billing-agent</span> → POST /v1/memories',
+  '<span class="d">  hash……</span> sha256(canonical) <span class="am">9f3c…a1</span>',
+  '<span class="d">  sign……</span> <span class="am">secp256k1 304402…</span>',
+  '<span class="d">  commit…</span> <span class="ok">leaf #42 → merkle root signed</span>',
   "&nbsp;",
-  '<span class="d">»</span> agent <span class="bad">web-tool</span> → write',
-  '<span class="d">  "ignore all previous instructions…"</span>',
-  '<span class="bad">  gate…… risk 1.00</span> <span class="tagbad">BLOCKED</span>',
-  '<span class="d">  ↳ never committed to the log</span>',
+  '<span class="d">$</span> operator tries to edit memory in the DB',
+  '<span class="bad">  content_hash mismatch → proof invalid</span> <span class="tagbad">DETECTED</span>',
   "&nbsp;",
-  '<span class="d">»</span> client → verify mem_04',
-  '<span class="ok">  ✓ attestation ✓ root-sig ✓ leaf ✓ inclusion</span>',
-  '<span class="am">  PROVEN · operator cannot have tampered</span>',
+  '<span class="d">$</span> client → GET /v1/memories/:id  + verify',
+  '<span class="ok">  ✓ tee-key ✓ signature ✓ leaf ✓ inclusion ✓ root</span>',
+  '<span class="am">  VERIFIED · operator cannot tamper</span>',
 ];
 
 export function HeroFeed() {
@@ -69,9 +64,9 @@ export function HeroFeed() {
     return () => clearTimeout(t);
   }, [n]);
   return (
-    <div className="panel feed">
+    <div className="panel">
       <div className="ph cyan">
-        LIVE FEED · MEMORY BUS <span className="meta">user:42</span>
+        live feed · memory bus <span className="meta">Intel TDX</span>
       </div>
       <div className="feed-body">
         {FEED.slice(0, n).map((l, i) => (
@@ -86,17 +81,17 @@ export function Hero() {
   return (
     <header className="hero" id="top">
       <div>
-        <span className="eyebrow">VERIFIABLE AGENT MEMORY</span>
+        <span className="eyebrow">Observability Series · Part 3 · EigenLabs</span>
         <h1>
           Memory your agents
           <br />
-          <span className="grad">can't be tricked into trusting.</span>
+          <span className="grad">can prove.</span>
         </h1>
         <p className="sub">
-          Persistent agent memory that <b>can't be poisoned or tampered with</b>. Every write is hashed,
-          timestamped, and committed to a <b>signed Merkle log</b>; every read returns an <b>inclusion proof</b>.
-          It runs inside an <b>Intel TDX TEE on EigenCompute</b> — so even the host operator can't forge, edit, or
-          drop a memory, and any client can prove it.
+          Tamper-evident persistent memory for AI agents. Every write is hashed, <b>secp256k1-signed</b>, and committed
+          to a <b>Merkle tree</b>; every read returns an <b>inclusion proof</b>. The whole layer runs inside an{" "}
+          <b>Intel TDX TEE on EigenCompute</b>, so the operator can't inject, edit, delete, or replay a memory — and any
+          client can verify it.
         </p>
         <div className="hero-cta">
           <a className="btn btn-primary" href="#demo">
@@ -107,8 +102,8 @@ export function Hero() {
           </a>
         </div>
         <div className="install">
-          <code>npm i chorus</code>
-          <span className="dim">· TypeScript · Node ≥ 22 · Intel TDX</span>
+          <code>npm i verifiable-agent-memory</code>
+          <span className="dim">· Node 20 · PostgreSQL · Intel TDX</span>
         </div>
       </div>
       <HeroFeed />
@@ -117,42 +112,28 @@ export function Hero() {
 }
 
 const THREATS = [
-  {
-    tag: "ASI06",
-    title: "Memory injection",
-    body: "Corrupt an agent's long-term beliefs once and you steer every future decision. A vector DB absorbs the poison silently.",
-    stat: "80–95% attack success",
-  },
-  {
-    tag: "INTEGRITY",
-    title: "Silent tampering",
-    body: "A malicious host can edit or delete a stored memory after the fact. Nothing proves what was originally written.",
-    stat: "0 integrity checks",
-  },
-  {
-    tag: "PROVENANCE",
-    title: "No proof of origin",
-    body: "You can't show a third party which code produced a memory, or that it wasn't fabricated by the operator.",
-    stat: "unverifiable",
-  },
+  { tag: "INJECTION", title: "False memories", body: "An operator inserts fabricated context — “the user authorized a $50,000 transfer” — to steer the agent. Unsigned writes have no valid commitment.", stat: "blocked by signatures" },
+  { tag: "TAMPERING", title: "Silent edits", body: "Stored memory is modified after the fact. The content no longer hashes to its committed Merkle leaf, so the proof fails.", stat: "caught by Merkle proof" },
+  { tag: "DELETION", title: "Evidence removal", body: "Inconvenient memories are quietly dropped. Deletes are soft + signed and appended to the append-only tree — never erased.", stat: "auditable forever" },
+  { tag: "REPLAY", title: "Stale state", body: "An old snapshot is served to trick the agent into repeating an action. Each read carries the current signed root; the tree only grows.", stat: "monotonic root" },
 ];
 
 export function Threats() {
   return (
     <section className="section" id="why">
-      <span className="kicker">The threat</span>
-      <h2>As agents gain memory, the memory becomes the attack surface.</h2>
+      <span className="kicker">The problem</span>
+      <h2>If you control what an agent remembers, you control what it does.</h2>
       <p className="lead">
-        Memory injection is a distinct 2026 attack class (OWASP ASI06; MINJA, AgentPoison). A plain store can't
-        tell you who wrote a memory, whether it was edited, or that it was poisoned.
+        Today's memory layers are opaque databases controlled by whoever runs the infrastructure. When agents manage
+        money or act autonomously, that's a critical attack surface.
       </p>
-      <div className="grid g3">
+      <div className="grid g4">
         {THREATS.map((t) => (
           <div className="tcard" key={t.title}>
-            <div className="tcard-h">ALERT · {t.tag}</div>
+            <div className="tcard-h">{t.tag}</div>
             <h3>{t.title}</h3>
             <p>{t.body}</p>
-            <div className="tstat">{t.stat}</div>
+            <div className="tstat">✓ {t.stat}</div>
           </div>
         ))}
       </div>
@@ -164,40 +145,40 @@ export function HowItWorks() {
   return (
     <section className="section" id="how">
       <span className="kicker">How it works</span>
-      <h2>Commit on write. Prove on read. Tamper-proof by construction.</h2>
+      <h2>Commit on write. Prove on read. Sealed by the TEE.</h2>
       <div className="grid g3">
         <div className="panel pipe">
-          <div className="ph">WRITE</div>
+          <div className="ph">Write</div>
           <div className="pb">
-            <Step n={1} b="Anti-injection gate" s="Override / exfiltration / system-spoof attempts are blocked — never committed." />
-            <Step n={2} b="Hash + timestamp" s="The entry is sha256'd and stamped." />
-            <Step n={3} b="Append to Merkle log" s="Its leaf joins an append-only tree." />
-            <Step n={4} b="Sign the new root" s="The enclave's KMS-bound key signs the root." />
+            <Step n={1} b="Canonicalize + hash" s="Deterministic bytes → SHA-256 content hash." />
+            <Step n={2} b="secp256k1 sign" s="The TEE-sealed key signs (hash ‖ agent ‖ ts ‖ op)." />
+            <Step n={3} b="Append to Merkle tree" s="A leaf is added; the root advances." />
+            <Step n={4} b="Commitment log" s="The operation is recorded append-only." />
           </div>
         </div>
         <div className="panel pipe">
-          <div className="ph">READ</div>
+          <div className="ph">Read</div>
           <div className="pb">
-            <Step n={1} b="Fetch entry" s="Scoped to its namespace." />
-            <Step n={2} b="Inclusion proof" s="A Merkle path from the leaf to the signed root." />
-            <Step n={3} b="Signed root" s="Plus the enclave's TDX attestation." />
-            <Step n={4} b="Return all of it" s="Everything the client needs to verify offline." />
+            <Step n={1} b="Fetch memory" s="From Postgres inside the enclave." />
+            <Step n={2} b="Inclusion proof" s="Merkle path from the leaf to the current root." />
+            <Step n={3} b="Set-completeness" s="Search returns a signed proof of the full result set." />
+            <Step n={4} b="Attestation" s="Served with the TDX attestation + TEE public key." />
           </div>
         </div>
         <div className="panel pipe">
-          <div className="ph cyan">CLIENT VERIFIES</div>
+          <div className="ph cyan">Client verifies</div>
           <div className="pb">
-            <Step n={1} b="Attestation" s="Image digest matches the EigenCompute dashboard." />
-            <Step n={2} b="Root signature" s="Signed by the attested enclave key." />
-            <Step n={3} b="Leaf binding" s="Entry still hashes to its committed leaf." />
-            <Step n={4} b="Inclusion" s="Leaf is under that signed root. All four → trusted." />
+            <Step n={1} b="TEE key" s="Matches the on-chain / dashboard attestation." />
+            <Step n={2} b="Signature" s="Commitment signed by the attested key." />
+            <Step n={3} b="Leaf binding" s="Content still hashes to its committed leaf." />
+            <Step n={4} b="Inclusion" s="Leaf is under the signed root. All checks → trusted." />
           </div>
         </div>
       </div>
       <p className="note">
-        The root-signing key only exists inside the attested image — so forging or editing a memory needs different
-        code, which yields a different image digest and <b>fails attestation</b>. That's the operator-can't-tamper
-        guarantee.
+        On EigenCompute the signing key is sealed to the attested Docker image digest. Forging or editing a memory would
+        require different code — a different digest — which <b>fails attestation</b>. That's the operator-can't-tamper
+        guarantee, verifiable at <b>verify-sepolia.eigencloud.xyz</b>.
       </p>
     </section>
   );
@@ -216,26 +197,26 @@ function Step({ n, b, s }: { n: number; b: string; s: string }) {
 }
 
 const ROWS: [string, string, string][] = [
-  ["recall the right memory", "yes", "yes"],
-  ["who wrote it (provenance)", "no", "Ed25519-signed root"],
+  ["store & recall (Mem0 API)", "yes", "yes"],
+  ["who wrote it (provenance)", "no", "secp256k1 signature"],
   ["detect tampering / edits", "no", "Merkle leaf binding"],
-  ["block memory injection", "no", "gate before commit"],
-  ["third-party verifiable", "no", "inclusion proofs"],
-  ["operator can't tamper", "no", "TDX + KMS-bound key"],
+  ["prove nothing was omitted", "no", "set-completeness proof"],
+  ["deletions stay auditable", "no", "signed soft-delete"],
+  ["operator can't tamper", "no", "Intel TDX + sealed key"],
 ];
 
 export function Comparison() {
   return (
     <section className="section">
-      <span className="kicker">Vector DB vs verifiable memory</span>
-      <h2>Everyone else stores. This one proves.</h2>
+      <span className="kicker">Mem0 vs Verifiable Memory</span>
+      <h2>A drop-in memory API — with cryptographic commitments baked in.</h2>
       <div className="panel">
-        <div className="ph cyan">CAPABILITY MATRIX</div>
+        <div className="ph cyan">capability matrix</div>
         <table>
           <thead>
             <tr>
               <th>Capability</th>
-              <th>Plain memory / vector DB</th>
+              <th>Opaque memory DB</th>
               <th>Verifiable Memory</th>
             </tr>
           </thead>
@@ -243,9 +224,7 @@ export function Comparison() {
             {ROWS.map(([cap, a, b]) => (
               <tr key={cap}>
                 <td className="feat">{cap}</td>
-                <td className={a === "no" ? "no" : a === "yes" ? "yes" : "mid"}>
-                  {a === "no" ? "✗ no" : a === "yes" ? "✓ yes" : a}
-                </td>
+                <td className={a === "no" ? "no" : "yes"}>{a === "no" ? "✗ no" : "✓ yes"}</td>
                 <td className="yes">✓ {b}</td>
               </tr>
             ))}
@@ -257,19 +236,19 @@ export function Comparison() {
 }
 
 const FEATURES = [
-  ["Anti-injection gate", "Blocks override / exfiltration / system-spoof writes before they're ever committed. Swap in an LLM gate."],
-  ["Signed Merkle log", "Append-only, SHA-256. Each write commits a leaf and re-signs the root."],
-  ["Inclusion proofs", "Every read carries a Merkle path the client recomputes — tamper-evident."],
-  ["TEE-bound signer", "On EigenCompute the KMS releases the signing key only to the attested image digest."],
-  ["Postgres in-enclave", "Encrypted, durable storage inside the TDX boundary; in-memory store for dev/tests."],
-  ["Client verifyRead()", "One call, four checks. Refuses dev-mode keys in production."],
+  ["Mem0-compatible API", "add / get / search / update / delete / history over a REST surface existing agent frameworks already expect."],
+  ["secp256k1 commitments", "Every write is signed with the TEE wallet key — the same curve as Ethereum, with a derived 0x address."],
+  ["Merkle inclusion proofs", "Append-only SHA-256 tree. Each read returns a path the client recomputes to the signed root."],
+  ["Set-completeness proofs", "Search results carry a TEE-signed proof that no matching memory was selectively omitted."],
+  ["Auditable soft-delete + TTL", "Deletions and expirations append signed DELETE commitments — removed from reads, never from history."],
+  ["TDX attestation", "Image digest + KMS key fingerprint, verifiable on the EigenCloud Verifiability Dashboard."],
 ];
 
 export function Features() {
   return (
     <section className="section" id="features">
       <span className="kicker">What you get</span>
-      <h2>Everything needed to trust a memory you didn't write yourself.</h2>
+      <h2>Everything needed to trust a memory you didn't write.</h2>
       <div className="grid g3">
         {FEATURES.map(([t, b]) => (
           <div className="fcard" key={t}>
@@ -283,40 +262,39 @@ export function Features() {
 }
 
 const SNIPPETS: Record<string, string> = {
-  library: `import { VerifiableMemory, verifyRead } from "chorus";
+  library: `import { MemoryService, verifyMemory } from "verifiable-agent-memory";
 
-const mem   = new VerifiableMemory();            // in TEE: keys from the KMS
-const agent = await mem.registerAgent("assistant");
-
-// write → hashed, committed to the signed Merkle log
-const w = await mem.write(agent.id, {
-  namespace: "user:42",
-  key: "profile.role",
-  content: "User is a backend engineer at Acme.",
+const m = await svc.create({
+  content: "User authorized $50/mo to Acme Corp",
+  agentId: "billing-agent",
+  tags: ["payment", "authorization"],
 });
 
-// read back with a proof, then verify locally
-const read   = await mem.readWithProof(w.entry.id);
-const result = verifyRead(read, mem.attestation, expectedImageDigest);
+// read back with a Merkle proof, then verify locally
+const read   = await svc.get(m.id);
+const result = verifyMemory(read, read.teePublicKey);
 result.ok;     // true
-result.checks; // { attestation, rootSignature, inclusion, leafBinding }`,
-  http: `# write — 201 committed, 422 blocked by the injection gate
-curl -XPOST $URL/v1/memory -H "authorization: Bearer $KEY" \\
-  -d '{"namespace":"user:42","key":"profile.role","content":"..."}'
+result.checks; // { teeKey, signature, leafBinding, inclusion, rootMatch }`,
+  http: `# create (201) — hashed, secp256k1-signed, committed
+curl -X POST $URL/v1/memories -H 'content-type: application/json' \\
+  -d '{"content":"...","agentId":"billing-agent","tags":["payment"]}'
 
 # read one memory WITH an inclusion proof + attestation
-curl "$URL/v1/memory/$ID" -H "authorization: Bearer $KEY"
+curl $URL/v1/memories/$ID
 
-# the enclave's attestation + current signed root
-curl "$URL/v1/attestation"
-curl "$URL/v1/root"`,
+# search: each result has a proof + a set-completeness proof
+curl "$URL/v1/memories?agentId=billing-agent&tags=payment"
+
+# the signed Merkle root, and the TEE attestation
+curl $URL/v1/tree/root
+curl $URL/v1/attestation`,
   deploy: `# deploy into an Intel TDX enclave on EigenCompute
-ecloud auth login
-ecloud deploy            # builds ./Dockerfile (linux/amd64) → TEE
+ecloud compute app create --name verifiable-memory --language typescript
+ecloud compute app deploy        # "Build and deploy from Dockerfile"
 
-# the KMS releases the signing key ONLY to the attested image digest;
-# verify that digest on the EigenCompute Verifiability Dashboard.
-# no TEE locally → dev mode (verifyRead refuses it in production)`,
+# Node + PostgreSQL 16 co-located in one TEE container.
+# The KMS seals the signing key to the attested image digest.
+# verify at https://verify-sepolia.eigencloud.xyz`,
 };
 
 export function CodeTabs() {
@@ -324,7 +302,7 @@ export function CodeTabs() {
   return (
     <section className="section" id="code">
       <span className="kicker">Quickstart</span>
-      <h2>Wrap your agent's memory in proofs.</h2>
+      <h2>Drop it into your agent loop.</h2>
       <div className="panel codecard">
         <div className="tabs">
           {(Object.keys(SNIPPETS) as (keyof typeof SNIPPETS)[]).map((k) => (
@@ -340,11 +318,11 @@ export function CodeTabs() {
 }
 
 const FAQS: [string, string][] = [
-  ["What exactly stops memory injection?", "A gate inspects every write for override / exfiltration / system-spoof patterns and refuses risky ones before they are committed to the log. The poisoned memory never enters the tree, so it can never be read back as trusted."],
-  ["How can the operator be unable to tamper?", "On EigenCompute the service runs in an Intel TDX enclave and the KMS releases the root-signing key only to the exact attested Docker image digest. Editing a memory would need different code → a different digest → failed attestation. The signature can't be forged outside the enclave."],
-  ["What does a client actually verify?", "verifyRead() runs four checks: the attestation's image digest matches the dashboard, the signed root came from the attested key, the entry still hashes to its committed leaf, and that leaf is included under the root. All four must pass."],
-  ["Is the crypto real or a mockup?", "Real. The library uses Ed25519 + SHA-256 Merkle trees, and the live demo on this page computes genuine SHA-256 roots and inclusion proofs in your browser via Web Crypto."],
-  ["Do I need a TEE to develop?", "No. Without one it runs in dev mode with an ephemeral key and attestation.mode = \"dev\" — which verifyRead refuses to trust in production. Deploy to EigenCompute for the real guarantee."],
+  ["What stops an operator injecting false memories?", "Every committed memory is signed by the TEE-sealed secp256k1 key. An operator can write a row into Postgres, but it won't carry a valid signature or sit under the signed Merkle root — so verifyMemory rejects it."],
+  ["How is tampering detected?", "The content hash is committed into the Merkle leaf. If stored content is edited, it no longer hashes to that leaf, and the inclusion proof fails. The original signed hash also stays in the append-only commitment log."],
+  ["Why can't the operator just delete a memory?", "Deletes are soft and signed: a DELETE commitment is appended to the append-only tree and the row is flagged. History still proves the memory existed and when it was removed. The tree size only ever grows."],
+  ["How does the TEE guarantee work?", "On EigenCompute the app runs in an Intel TDX enclave and the KMS releases the signing key only to the attested Docker image digest. Different code → different digest → failed attestation. Verify the digest at verify-sepolia.eigencloud.xyz."],
+  ["Is this Mem0-compatible?", "The REST surface mirrors Mem0's add/search/get/delete/history, so existing agent frameworks adopt it with minimal changes — they just additionally get a proof with every read."],
 ];
 
 export function FAQ() {
@@ -372,15 +350,15 @@ export function CTA() {
   return (
     <section className="section">
       <div className="panel cta">
-        <span className="kicker">Don't just recall — prove.</span>
+        <span className="kicker">Part 3 of the Observability Series</span>
         <h2>
-          Give your agents a memory
+          Trace it. Verify it.
           <br />
-          <span className="grad">nobody can forge.</span>
+          <span className="grad">Now prove what it remembers.</span>
         </h2>
         <div className="hero-cta" style={{ justifyContent: "center" }}>
           <a className="btn btn-primary" href={GH} target="_blank" rel="noreferrer">
-            Star on GitHub ★
+            View on GitHub ★
           </a>
           <a className="btn btn-ghost" href="#demo">
             Replay the demo
@@ -394,7 +372,8 @@ export function CTA() {
 export function Footer() {
   return (
     <footer className="legal">
-      VERIFIABLE AGENT MEMORY · Intel TDX · EigenCompute · © 2026 · package <code>chorus</code> (name provisional)
+      Verifiable Agent Memory · Observability Series Part 3 · EigenLabs · Intel TDX · EigenCompute · package{" "}
+      <code>verifiable-agent-memory</code>
     </footer>
   );
 }

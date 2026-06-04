@@ -1,7 +1,7 @@
 {
-  "name": "chorus",
+  "name": "verifiable-agent-memory",
   "version": "0.1.0",
-  "description": "Verifiable, injection-resistant agent memory: every write is hashed, timestamped, and committed to a signed Merkle log; reads return inclusion proofs. Runs inside an Intel TDX TEE on EigenCompute so the operator cannot tamper.",
+  "description": "Verifiable Agent Memory — tamper-evident persistent memory for AI agents. Every write is hashed, secp256k1-signed, and committed to a Merkle tree; every read returns an inclusion proof. Runs inside an Intel TDX TEE on EigenCompute. (Observability Series, Part 3 — EigenLabs)",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -11,23 +11,22 @@
   "homepage": "https://github.com/zeeshan8281/chorus#readme",
   "keywords": [
     "ai-agents",
-    "multi-agent",
     "agent-memory",
-    "shared-memory",
-    "coordination",
-    "llm",
+    "verifiable",
+    "tee",
+    "intel-tdx",
+    "eigencompute",
+    "merkle-tree",
     "typescript"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
-  },
-  "bin": {
-    "chorus": "./dist/server.js"
+    ".": "./dist/index.js",
+    "./client": "./dist/client/index.js"
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -35,21 +34,23 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "example": "tsx examples/multi-agent.ts",
+    "demo": "tsx demo/create-and-verify.ts",
+    "demo:tamper": "tsx demo/tamper-detection.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.7",
-    "hono": "^4.6.14"
+    "@noble/curves": "^1.7.0",
+    "@noble/hashes": "^1.6.1",
+    "@opentelemetry/api": "^1.9.0",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
   },
   "devDependencies": {
+    "@types/express": "^4.17.21",
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.11.10",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
-  },
-  "optionalDependencies": {
-    "pg": "^8.13.1"
   }
 }

@@ -1,77 +1,137 @@
-import type { ProofStep } from "./merkle.js";
-import type { InjectionVerdict } from "./inject.js";
+import type { MerkleProof } from "./merkle/tree.js";
 
-export interface Agent {
+export type Operation = "CREATE" | "UPDATE" | "DELETE";
+
+// ---------- API-facing types (hex-encoded crypto, ISO timestamps) ----------
+
+export interface Memory {
   id: string;
-  name: string;
-  apiKey?: string;
-  createdAt: string;
-}
-
-export interface MemoryInput {
-  /** Logical partition (an agent, a user, a workspace). */
-  namespace: string;
+  agentId: string;
   content: string;
-  /** Optional logical slot. A newer write to the same key supersedes the old. */
-  key?: string;
-  source?: string;
-  tags?: string[];
-  metadata?: Record<string, unknown>;
-}
-
-/** A committed memory. Its hash sits at `index` in the Merkle log. */
-export interface MemoryEntry {
-  id: string;
-  namespace: string;
-  content: string;
-  key?: string;
-  source?: string;
-  authorAgentId: string;
-  /** Position of this entry's leaf in the append-only Merkle log. */
-  index: number;
-  createdAt: string;
-  /** sha256 of the canonical entry core — what the leaf commits to. */
-  contentHash: string;
-  tags: string[];
   metadata: Record<string, unknown>;
-  /** True once superseded by a newer write to the same (namespace, key). */
-  superseded: boolean;
+  tags: string[];
+  version: number;
+  isDeleted: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-/** The signed Merkle root after a write — the tamper-evidence anchor. */
-export interface RootCommitment {
-  /** Merkle root over all leaves up to `size`. */
-  root: string;
-  /** Number of leaves committed. */
-  size: number;
-  /** Ed25519 signature over canonical { root, size, signedAt } by the TEE key. */
-  rootSignature: string;
-  /** Public key whose authenticity is established by the TEE attestation. */
-  signerPublicKey: string;
-  signedAt: string;
+export interface Commitment {
+  contentHash: string;
+  signature: string;
+  merkleRoot: string;
+  merkleLeafIndex: number;
+  operation: Operation;
+  timestamp: string;
 }
 
-/** Returned on write. */
-export interface WriteReceipt {
-  entry: MemoryEntry;
-  leafHash: string;
-  commitment: RootCommitment;
-  injection: InjectionVerdict;
+export interface VerifiedMemory extends Memory {
+  commitment: Commitment;
 }
 
-/** Raised when the injection gate blocks a write. */
-export interface BlockedWrite {
-  blocked: true;
-  injection: InjectionVerdict;
+export interface VerifiedMemoryWithProof {
+  memory: VerifiedMemory;
+  proof: MerkleProof;
+  teePublicKey: string;
 }
 
-/** A read together with everything a client needs to verify it. */
-export interface VerifiableRead {
-  entry: MemoryEntry;
-  leafHash: string;
-  proof: ProofStep[];
-  commitment: RootCommitment;
+export interface SetCompletenessProof {
+  queryHash: string;
+  resultSetHash: string;
+  signature: string;
+  merkleRoot: string;
+  treeSize: number;
 }
 
-export type { ProofStep } from "./merkle.js";
-export type { InjectionVerdict } from "./inject.js";
+export interface SearchResponse {
+  memories: VerifiedMemory[];
+  proofs: MerkleProof[];
+  setProof: SetCompletenessProof;
+  pagination: { total: number; limit: number; offset: number };
+  teePublicKey: string;
+}
+
+export interface DeletionReceipt {
+  memoryId: string;
+  deletionCommitment: Commitment;
+  proof: MerkleProof;
+  teePublicKey: string;
+}
+
+export interface MemoryVersion {
+  memoryId: string;
+  version: number;
+  content: string;
+  metadata: Record<string, unknown>;
+  commitment: Commitment;
+  createdAt: string;
+}
+
+export interface AttestationInfo {
+  mode: "tee" | "dev";
+  teePublicKey: string;
+  teeAddress: string;
+  imageDigest: string | null;
+  attestationToken: string | null;
+  onChainTxHash: string | null;
+  eigenComputeDeploymentId: string | null;
+  kmsKeyFingerprint: string | null;
+  platform: string;
+  confidentialSpace: string;
+  verifyUrl: string;
+}
+
+export type { MerkleProof, ProofStep } from "./merkle/tree.js";
+
+// ---------- internal storage rows (Buffers for BYTEA, Dates) ----------
+
+export interface MemoryRow {
+  id: string;
+  agentId: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  tags: string[];
+  contentHash: Buffer;
+  signature: Buffer;
+  merkleLeafIdx: number;
+  merkleRoot: Buffer;
+  version: number;
+  isDeleted: boolean;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface VersionRow {
+  memoryId: string;
+  version: number;
+  content: string;
+  metadata: Record<string, unknown>;
+  contentHash: Buffer;
+  signature: Buffer;
+  merkleLeafIdx: number;
+  merkleRoot: Buffer;
+  createdAt: Date;
+}
+
+export interface CommitmentLogRow {
+  operation: Operation;
+  memoryId: string;
+  contentHash: Buffer;
+  signature: Buffer;
+  merkleRoot: Buffer;
+  merkleLeafIdx: number;
+  prevRoot: Buffer | null;
+  timestamp: Date;
+}
+
+export interface SearchFilter {
+  agentId?: string;
+  tags?: string[];
+  since?: Date;
+  until?: Date;
+  includeDeleted?: boolean;
+  limit: number;
+  offset: number;
+}
