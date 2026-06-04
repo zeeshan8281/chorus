@@ -2,27 +2,13 @@ import { useEffect, useState } from "react";
 
 const GH = "https://github.com/zeeshan8281/chorus";
 
-function Mark({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <defs>
-        <linearGradient id="eig" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#a77dff" />
-          <stop offset="1" stopColor="#8ae06c" />
-        </linearGradient>
-      </defs>
-      <rect x="3" y="3" width="26" height="26" rx="6" stroke="url(#eig)" strokeWidth="2" />
-      <path d="M11 16 L15 20 L21 12" stroke="url(#eig)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </svg>
-  );
-}
-
 export function Nav() {
   return (
     <nav className="nav">
       <div className="nav-inner">
         <a className="brand" href="#top">
-          <Mark /> Verifiable Memory <span className="tag">EIGENCOMPUTE</span>
+          <span className="logo">⚡</span> <span className="name">Verifiable Memory</span>{" "}
+          <span className="tag">EigenCompute</span>
         </a>
         <div className="nav-links">
           <a href="#why">Threats</a>
