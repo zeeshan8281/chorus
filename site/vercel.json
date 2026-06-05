@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/v1/:path*",
+      "destination": "http://34.7.95.212:3000/v1/:path*"
+    }
+  ]
+}

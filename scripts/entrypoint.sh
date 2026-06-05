@@ -11,6 +11,11 @@ export PGDATA="${PGDATA:-/data/pgdata}"
 mkdir -p "$PGDATA" "$DATA_DIR"
 chown -R postgres:postgres /data
 
+# PostgreSQL's default socket/lock dir lives under /var/run, which is a fresh
+# tmpfs in the TEE and may not exist at boot — create it before starting PG.
+mkdir -p /var/run/postgresql
+chown postgres:postgres /var/run/postgresql
+
 # 2. Initialize PostgreSQL on first boot (on the TEE's encrypted volume).
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   su postgres -c "initdb -D $PGDATA --auth-local=trust --auth-host=trust"
